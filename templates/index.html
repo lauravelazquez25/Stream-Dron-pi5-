@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Transmisión en Vivo</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            text-align: center;
+            font-family: sans-serif;
+        }
+        video {
+            width: 80%;
+            max-width: 960px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Transmisión en vivo desde la Raspberry Pi 5</h1>
+
+    <!-- Bloque de video y mensaje -->
+    <video id="video" controls autoplay muted style="display: none;"></video>
+    <p id="mensaje" style="font-size: 1.5em;">Esperando transmisión...</p>
+
+    <!-- Script para verificar si el stream está activo y cargar video -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script>
+        const streamActivo = {{ 'true' if stream_activo else 'false' }};
+        const video = document.getElementById('video');
+        const mensaje = document.getElementById('mensaje');
+        const videoSrc = "{{ url_for('static', filename='hls/stream.m3u8') }}";
+
+        if (streamActivo) {
+            if (Hls.isSupported()) {
+                const hls = new Hls();
+                hls.loadSource(videoSrc);
+                hls.attachMedia(video);
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = videoSrc;
+            }
+
+            video.style.display = "block";  // Mostrar el video
+            mensaje.style.display = "none"; // Ocultar mensaje
+        }
+    </script>
+</body>
+</html>

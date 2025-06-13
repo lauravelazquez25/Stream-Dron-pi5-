@@ -1,0 +1,5 @@
+source /home/laura25/Desktop/venv/bin/activate
+chmod +x iniciar_transmision.sh
+./iniciar_transmision.sh
+python3 video_flask.py
+ngrok http 5000

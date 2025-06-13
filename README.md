@@ -1,14 +1,20 @@
 # Stream-Dron-pi5-
 
 ### INTRODUCCION A LOS SISTEMAS DISTRIBUIDOS Y PARALELOS
-Sistema concurrente de transmisión distribuida para monitoreo con dron
-Proyecto Final Integrador:
+Proyecto Final Integrador: Sistema concurrente de transmisión distribuida para monitoreo con dron
+---
+
+
+
 Universidad Nacional de Rio Negro - Sede Bariloche -Primer Cuatrimestre 2025
 
 ### Asignatura: Introduccion a los Sistemas Distribuidos y Paralelos
 
 Docente: Walter Agüero
+---
+
 Estudiante: Laura Velazquez
+---
 
 Este notebook tiene como propósito documentar el desarrollo del proyecto de promoción de la asignatura Sistemas Distribuidos y Paralelos, en articulación con el trabajo que se está realizando en la asignatura Laboratorio de Sistemas Embebidos. Se busca no sólo cumplir con los objetivos técnicos de ambas materias, sino también generar un aporte significativo en términos de integración, visión de sistemas y aplicación real, a mi formación profesional.
 

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Transmisión en Vivo</title>
+    <style>
+        body { background: #000; color: #fff; text-align: center; font-family: sans-serif; margin: 0; padding: 16px; }
+        video { width: 100%; max-width: 960px; margin-top: 20px; }
+        #estado { font-size: 0.9em; color: #aaa; margin-top: 12px; }
+    </style>
+</head>
+<body>
+    <h1>Transmisión en vivo desde la Raspberry Pi 5</h1>
+
+    <video id="video" controls autoplay muted playsinline hidden></video>
+    <p id="mensaje" style="font-size: 1.5em;">Esperando transmisión...</p>
+    <p id="estado"></p>
+
+    <!-- hls.js 1.5.17 incluido en el repo: funciona aunque la red del dron no tenga internet -->
+    <script src="{{ url_for('static', filename='vendor/hls.min.js') }}"></script>
+    <script>
+        const video = document.getElementById("video");
+        const mensaje = document.getElementById("mensaje");
+        const estadoEl = document.getElementById("estado");
+        const videoSrc = "{{ url_for('archivos_hls', nombre='stream.m3u8') }}";
+        let hls = null;
+
+        function iniciarVideo() {
+            if (window.Hls && Hls.isSupported()) {
+                hls = new Hls({ liveSyncDurationCount: 2 });
+                hls.loadSource(videoSrc);
+                hls.attachMedia(video);
+            } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+                video.src = videoSrc;   // Safari / iOS reproducen HLS de forma nativa
+            }
+            video.hidden = false;
+            mensaje.hidden = true;
+        }
+
+        function detenerVideo() {
+            if (hls) { hls.destroy(); hls = null; }
+            video.removeAttribute("src");
+            video.hidden = true;
+            mensaje.hidden = false;
+        }
+
+        // Consultamos el estado periódicamente: el video aparece solo cuando
+        // arranca el stream, sin necesidad de recargar la página.
+        async function actualizar() {
+            try {
+                const estado = await (await fetch("{{ url_for('api_estado') }}")).json();
+                const reproduciendo = !video.hidden;
+                if (estado.stream_activo && !reproduciendo) iniciarVideo();
+                if (!estado.stream_activo && reproduciendo) detenerVideo();
+
+                const r = estado.ultimo_resultado;
+                estadoEl.textContent = `Cámara: ${estado.camara} · Procesador: ${estado.procesador}`
+                    + (r ? ` · Brillo medio: ${r.brillo_medio}` : "");
+            } catch (e) {
+                estadoEl.textContent = "Sin conexión con el servidor";
+            }
+        }
+
+        actualizar();
+        setInterval(actualizar, 2000);
+    </script>
+</body>
+</html>

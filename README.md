@@ -16,7 +16,7 @@ Docente: Walter Agüero
 Estudiante: Laura Velazquez
 ---
 
-Este notebook tiene como propósito documentar el desarrollo del proyecto de promoción de la asignatura Sistemas Distribuidos y Paralelos, en articulación con el trabajo que se está realizando en la asignatura Laboratorio de Sistemas Embebidos. Se busca no sólo cumplir con los objetivos técnicos de ambas materias, sino también generar un aporte significativo en términos de integración, visión de sistemas y aplicación real, a mi formación profesional.
+Este repositorio tiene como propósito documentar el desarrollo del proyecto de promoción de la asignatura Sistemas Distribuidos y Paralelos, en articulación con el trabajo que se está realizando en la asignatura Laboratorio de Sistemas Embebidos. Se busca no sólo cumplir con los objetivos técnicos de ambas materias, sino también generar un aporte significativo en términos de integración, visión de sistemas y aplicación real, a mi formación profesional.
 
 ### Descripción del Proyecto
 El proyecto tiene como base el desarrollo de un sistema de monitoreo embarcado en un dron, equipado con una cámara CSI conectada a una Raspberry Pi 5 de 8 GB, con el objetivo de capturar y transmitir video en tiempo real. La estación base, también implementada con tecnología embebida, permite supervisar y controlar los procesos de vuelo, comunicación y procesamiento distribuido.
@@ -47,6 +47,100 @@ Captura de video mediante OpenCV (cv2)
 Servidor Flask o HTTP que transmite el video en tiempo real
 Uso de hilos (threading) para separar captura y transmisión
 
-### Aclaracion
+### Aclaración
 
-En este repositorio sólo se incluye la programacion del stream del video capturado por la camara CSI embebida en la Raspberry pi5
+En este repositorio sólo se incluye la programación del stream del video capturado por la cámara CSI embebida en la Raspberry Pi 5.
+
+---
+
+## Arquitectura
+
+```
+ Cámara CSI ──► rpicam-vid ──► ffmpeg (H.264 → HLS) ──► hls_output/*.ts + stream.m3u8
+                └──────── hilo Camara ────────┘                │
+                                                               ├──► hilo Procesador (OpenCV)
+                                                               │          │
+                                                               │          ▼
+                                                               │    EstadoSistema (Lock)
+                                                               │          │
+                                                               ▼          ▼
+                                                  Flask (hilo principal, un hilo por petición)
+                                                   /            /hls/...        /api/estado
+                                                   ▼
+                                               Navegador (hls.js)
+```
+
+- **`Camara`**: hilo supervisor que lanza el pipeline `rpicam-vid | ffmpeg`, lo vigila y lo reinicia si se cae.
+- **`Procesador`**: hilo que toma el último segmento `.ts` *completo* y lo analiza frame a frame. La función de análisis es intercambiable (Etapa 2: TensorFlow Lite).
+- **`EstadoSistema`**: objeto compartido protegido por un `Lock`; los hilos escriben y la web lee.
+- **`SistemaStream`**: orquestador; arranca los hilos y coordina el apagado con un único `threading.Event`.
+
+## Estructura del proyecto
+
+```
+├── run.py                     # Punto de entrada (línea de comandos)
+├── stream_dron/
+│   ├── config.py              # Configuración centralizada (sobreescribible con STREAM_*)
+│   ├── estado.py              # Estado compartido thread-safe
+│   ├── hls.py                 # Utilidades sobre los segmentos HLS
+│   ├── camara.py              # Hilo de captura + codificación
+│   ├── procesador.py          # Hilo de procesamiento OpenCV
+│   ├── web.py                 # App Flask (application factory)
+│   ├── sistema.py             # Orquestador de los subsistemas
+│   ├── templates/index.html
+│   └── static/vendor/hls.min.js   # hls.js 1.5.17 (licencia Apache-2.0)
+├── tests/                     # Pruebas con pytest
+├── requirements.txt
+└── requirements-dev.txt
+```
+
+## Instalación (Raspberry Pi OS Bookworm)
+
+```bash
+sudo apt install ffmpeg rpicam-apps python3-venv
+```
+
+```bash
+python3 -m venv .venv
+```
+
+```bash
+source .venv/bin/activate
+```
+
+```bash
+pip install -r requirements.txt
+```
+
+## Ejecución
+
+```bash
+python run.py
+```
+
+Luego abrir `http://<ip-de-la-pi>:5000`. Opciones útiles:
+
+| Opción | Efecto |
+|---|---|
+| `--puerto 8080` | Cambia el puerto HTTP |
+| `--sin-camara` | No lanza la captura (para desarrollar en una PC sin la cámara) |
+| `--sin-procesamiento` | No lanza el hilo de OpenCV |
+| `-v` | Logs detallados |
+
+Cualquier parámetro de `stream_dron/config.py` puede cambiarse con una variable de entorno, por ejemplo `STREAM_ANCHO=640 STREAM_ALTO=480 python run.py`.
+
+Para acceder desde fuera de la red local:
+
+```bash
+ngrok http 5000
+```
+
+## Pruebas
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+```bash
+python -m pytest
+```

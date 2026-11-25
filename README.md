@@ -89,7 +89,9 @@ En este repositorio sólo se incluye la programación del stream del video captu
 │   ├── sistema.py             # Orquestador de los subsistemas
 │   ├── templates/index.html
 │   └── static/vendor/hls.min.js   # hls.js 1.5.17 (licencia Apache-2.0)
-├── tests/                     # Pruebas con pytest
+├── tests/                     # Pruebas con pytest (sin hardware)
+├── .github/workflows/         # CI: ejecuta los tests en cada push
+├── CLAUDE.md                  # Reglas del proyecto para Claude Code
 ├── requirements.txt
 └── requirements-dev.txt
 ```
@@ -144,3 +146,14 @@ pip install -r requirements-dev.txt
 ```bash
 python -m pytest
 ```
+
+Las pruebas corren en cualquier PC, sin la Raspberry Pi ni la cámara, y se ejecutan automáticamente en GitHub Actions con cada push.
+
+| Archivo | Qué verifica |
+|---|---|
+| `test_hls.py` | Orden de los segmentos por fecha, detección del segmento en escritura y de stream caído |
+| `test_web.py` | Rutas de Flask, playlist sin caché y protección contra rutas fuera del directorio HLS |
+| `test_config_y_camara.py` | Configuración por entorno, comandos del pipeline y `EstadoSistema` con 8 hilos concurrentes |
+| `test_hilos.py` | Reinicio y apagado de `Camara`, salto al segmento más nuevo en `Procesador` y apagado coordinado de `SistemaStream` |
+
+En `test_hilos.py`, `rpicam-vid` y `ffmpeg` se reemplazan por procesos de Python reales unidos por la misma tubería, y OpenCV por un módulo falso. Así se prueba la lógica concurrente sin hardware. Lo que **no** cubren es el pipeline real con la cámara: eso se verifica en la Pi.
